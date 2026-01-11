@@ -1,6 +1,6 @@
 flask
-boto3
-flask-login
 flask-sqlalchemy
-pillow
+flask-login
 gunicorn
+google-generativeai
+requests
