@@ -3,31 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Caso Práctico: Marketing AI</title>
+    <title>Marketing AI Suite</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; }
-        .card-custom { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .tab-content { background: white; padding: 20px; border-radius: 0 0 15px 15px; border: 1px solid #dee2e6; border-top: none; }
+        .tab-content { background: white; padding: 20px; border: 1px solid #dee2e6; border-top: none; }
     </style>
 </head>
 <body>
 
-<div class="container mt-5">
-    <div class="text-center mb-5">
-        <h1>🚀 Plataforma de Marketing Generativo</h1>
-        <p class="text-muted">Desarrollado por Jimmy Rugel | AWS Bedrock Integration</p>
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">🚀 Marketing AI</span>
+        <span class="text-white">
+            Hola, <strong>{{ user.username }}</strong> 
+            <span class="badge bg-warning text-dark">{{ user.role }}</span>
+            <a href="/logout" class="btn btn-sm btn-outline-light ms-3">Cerrar Sesión</a>
+        </span>
     </div>
+</nav>
+
+<div class="container">
     
     <ul class="nav nav-tabs" id="myTab" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#image">🎨 Generación de Imágenes</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#text">📝 Edición de Texto (Claude)</button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#text">📝 Edición de Texto</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#history" onclick="loadHistory()">🕒 Historial y Auditoría</button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#history" onclick="loadHistory()">🕒 Auditoría</button>
         </li>
     </ul>
 
@@ -35,24 +41,18 @@
         <div class="tab-pane fade show active" id="image">
             <div class="row">
                 <div class="col-md-5">
-                    <div class="mb-3">
-                        <label class="form-label">Describe tu imagen (Prompt):</label>
-                        <textarea id="imgPrompt" class="form-control" rows="4" placeholder="Ej: Una taza de café futurista en una mesa de neón..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Estilo Artístico:</label>
-                        <select id="imgStyle" class="form-select">
-                            <option value="photographic">Fotorealista</option>
-                            <option value="cinematic">Cinemático</option>
-                            <option value="anime">Anime / Manga</option>
-                            <option value="3d-model">Modelo 3D</option>
-                            <option value="origami">Origami</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary w-100" onclick="generateImage()">✨ Generar Imagen</button>
+                    <label class="form-label">Prompt:</label>
+                    <textarea id="imgPrompt" class="form-control mb-3" rows="3"></textarea>
+                    <label class="form-label">Estilo:</label>
+                    <select id="imgStyle" class="form-select mb-3">
+                        <option value="photographic">Fotorealista</option>
+                        <option value="anime">Anime</option>
+                        <option value="3d-model">3D</option>
+                    </select>
+                    <button class="btn btn-primary w-100" onclick="generateImage()">Generar Imagen</button>
                 </div>
-                <div class="col-md-7 text-center d-flex align-items-center justify-content-center bg-light border rounded">
-                    <div id="imgResult" class="p-3 text-muted">La imagen aparecerá aquí...</div>
+                <div class="col-md-7 text-center border rounded d-flex align-items-center justify-content-center bg-light">
+                    <div id="imgResult" class="p-3">La imagen aparecerá aquí...</div>
                 </div>
             </div>
         </div>
@@ -60,33 +60,25 @@
         <div class="tab-pane fade" id="text">
             <div class="row">
                 <div class="col-md-6">
-                    <label class="form-label">Texto Original:</label>
-                    <textarea id="txtInput" class="form-control mb-3" rows="8" placeholder="Pega aquí el texto que quieres mejorar..."></textarea>
-                    
-                    <label class="form-label">Instrucción para la IA:</label>
+                    <textarea id="txtInput" class="form-control mb-3" rows="6" placeholder="Texto a editar..."></textarea>
                     <select id="txtAction" class="form-select mb-3">
-                        <option value="Resumir este texto manteniendo los puntos clave">Resumir</option>
-                        <option value="Corregir errores gramaticales y mejorar el tono">Corregir Gramática</option>
-                        <option value="Traducir al inglés profesional">Traducir al Inglés</option>
-                        <option value="Expandir esta idea con ejemplos de marketing">Expandir Idea</option>
+                        <option value="Resumir">Resumir</option>
+                        <option value="Corregir">Corregir</option>
+                        <option value="Expandir">Expandir</option>
                     </select>
-                    <button class="btn btn-success w-100" onclick="processText()">🤖 Procesar con Claude</button>
+                    <button class="btn btn-success w-100" onclick="processText()">Procesar Texto</button>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Resultado:</label>
-                    <div id="txtResult" class="p-3 border rounded bg-white" style="min-height: 300px; white-space: pre-wrap;">Esperando input...</div>
+                    <div id="txtResult" class="p-3 border rounded bg-white" style="min-height: 200px;">Resultado...</div>
                 </div>
             </div>
         </div>
 
         <div class="tab-pane fade" id="history">
-            <h5 class="mb-3">Registro de Actividad (Auditoría)</h5>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-dark"><tr><th>Fecha</th><th>Acción</th><th>Detalle/Resultado</th></tr></thead>
-                    <tbody id="historyTable"></tbody>
-                </table>
-            </div>
+            <table class="table table-hover">
+                <thead class="table-dark"><tr><th>Usuario</th><th>Fecha</th><th>Acción</th><th>Detalle</th></tr></thead>
+                <tbody id="historyTable"></tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -94,8 +86,7 @@
 <script>
 async function generateImage() {
     const resDiv = document.getElementById('imgResult');
-    resDiv.innerHTML = '<div class="spinner-border text-primary" role="status"></div><br>Generando arte...';
-    
+    resDiv.innerHTML = 'Generando...';
     try {
         const res = await fetch('/api/generate-image', {
             method: 'POST',
@@ -106,20 +97,18 @@ async function generateImage() {
             })
         });
         const data = await res.json();
-        
         if(data.image_url) {
-            resDiv.innerHTML = `<img src="${data.image_url}" class="img-fluid rounded shadow-lg" style="max-height: 400px;">
-                                <br><a href="${data.image_url}" download class="btn btn-outline-secondary mt-3 btn-sm">⬇ Descargar</a>`;
+            resDiv.innerHTML = `<img src="${data.image_url}" class="img-fluid" style="max-height:300px;">`;
         } else {
-            resDiv.innerHTML = `<div class="alert alert-danger">${data.error || 'Error desconocido'}</div>`;
+            // Muestra el error de permisos si ocurre
+            resDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
         }
-    } catch (e) { resDiv.innerHTML = `<div class="alert alert-danger">Error de conexión</div>`; }
+    } catch(e) { resDiv.innerHTML = "Error de red"; }
 }
 
 async function processText() {
     const resDiv = document.getElementById('txtResult');
-    resDiv.innerHTML = 'Pensando... (Consultando a Claude)';
-    
+    resDiv.innerText = 'Procesando...';
     const res = await fetch('/api/edit-text', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -129,7 +118,8 @@ async function processText() {
         })
     });
     const data = await res.json();
-    resDiv.innerText = data.result || "Error al procesar.";
+    if (data.error) resDiv.innerHTML = `<div class="text-danger fw-bold">${data.error}</div>`;
+    else resDiv.innerText = data.result;
 }
 
 async function loadHistory() {
@@ -138,11 +128,7 @@ async function loadHistory() {
     const tbody = document.getElementById('historyTable');
     tbody.innerHTML = "";
     data.forEach(item => {
-        let content = item.result;
-        if(item.action === 'image_gen') content = `<a href="/static/images/${item.result}" target="_blank">Ver Imagen Generada</a>`;
-        else content = content.substring(0, 80) + '...';
-        
-        tbody.innerHTML += `<tr><td>${item.date}</td><td><span class="badge bg-secondary">${item.action}</span></td><td>${content}</td></tr>`;
+        tbody.innerHTML += `<tr><td><strong>${item.user}</strong></td><td>${item.date}</td><td>${item.action}</td><td>${item.result.substring(0,50)}...</td></tr>`;
     });
 }
 </script>
