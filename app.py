@@ -14,7 +14,7 @@ app.config['UPLOAD_FOLDER'] = 'static/images'
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'index' # Redirigir si no está logueado
+login_manager.login_view = 'index'
 
 # --- MODELOS BD ---
 class User(UserMixin, db.Model):
@@ -33,14 +33,19 @@ class ContentHistory(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# --- CORRECCIÓN: Crear BD al iniciar, compatible con Render ---
+with app.app_context():
+    db.create_all()
+    # Crear usuario admin si no existe
+    if not User.query.filter_by(username="JimmyRugel").first():
+        admin = User(username="JimmyRugel")
+        db.session.add(admin)
+        db.session.commit()
+
 @app.route('/')
 def index():
-    # Login automático para demostración
-    user = User.query.first()
-    if not user:
-        user = User(username="JimmyRugel")
-        db.session.add(user)
-        db.session.commit()
+    # Login automático seguro
+    user = User.query.filter_by(username="JimmyRugel").first()
     login_user(user)
     return render_template('dashboard.html')
 
@@ -51,7 +56,6 @@ def api_gen_image():
     prompt = data.get('prompt')
     style = data.get('style')
     
-    # Filtro Ético Básico
     forbidden = ["violencia", "odio", "desnudo", "sangre"]
     if any(w in prompt.lower() for w in forbidden):
         return jsonify({"error": "Contenido bloqueado por política ética."}), 400
@@ -59,7 +63,6 @@ def api_gen_image():
     img_base64 = generate_image(prompt, style)
     
     if img_base64:
-        # En Render (sistema de archivos efímero), guardamos temporalmente
         filename = f"img_{datetime.datetime.now().timestamp()}.png"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         with open(filepath, "wb") as fh:
@@ -95,6 +98,4 @@ def get_history():
     return jsonify(data)
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True, port=5000)
