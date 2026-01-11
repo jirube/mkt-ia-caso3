@@ -4,7 +4,7 @@ import base64
 import os
 from botocore.exceptions import ClientError
 
-# Configuración segura: Lee las claves del entorno del servidor
+# Configuración del cliente Bedrock
 bedrock_runtime = boto3.client(
     service_name='bedrock-runtime',
     region_name='us-east-1',
@@ -14,28 +14,45 @@ bedrock_runtime = boto3.client(
 
 def generate_image(prompt, style_preset="photographic"):
     """
-    Genera imagen usando Stable Diffusion XL.
-    CORRECCIÓN: Se actualizó el modelId a la versión exacta ':0'
+    Genera imagen usando Amazon Titan Image Generator G1.
     """
+    
+    # Construimos el Prompt enriquecido
+    final_prompt = f"{prompt}. Artistic style: {style_preset}, high quality, detailed."
+
+    # Estructura JSON para Amazon Titan
     body = json.dumps({
-        "text_prompts": [{"text": prompt}],
-        "cfg_scale": 10,
-        "steps": 30,
-        "style_preset": style_preset
+        "taskType": "TEXT_IMAGE",
+        "textToImageParams": {
+            "text": final_prompt
+        },
+        "imageGenerationConfig": {
+            "numberOfImages": 1,
+            "height": 1024,
+            "width": 1024,
+            "cfgScale": 8.0,
+            "seed": 0 
+        }
     })
     
     try:
         response = bedrock_runtime.invoke_model(
             body=body,
-            modelId="stability.stable-diffusion-xl-v1:0",  # <--- AQUÍ ESTÁ EL CAMBIO
+            modelId="amazon.titan-image-generator-v1",
             accept="application/json",
             contentType="application/json"
         )
+        
         response_body = json.loads(response.get("body").read())
-        base64_image = response_body.get("artifacts")[0].get("base64")
+        # Titan devuelve la imagen en base64 dentro de una lista 'images'
+        base64_image = response_body.get("images")[0]
         return base64_image
+        
     except ClientError as e:
-        print(f"Error generando imagen: {e}")
+        print(f"Error generando imagen (Titan): {e}")
+        return None
+    except Exception as e:
+        print(f"Error desconocido: {e}")
         return None
 
 def edit_text_content(original_text, instruction):
