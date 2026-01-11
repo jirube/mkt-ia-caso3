@@ -7,13 +7,12 @@ import random
 from botocore.exceptions import ClientError
 from botocore.config import Config
 
-# 1. Configuración de conexión con "Reintentos Adaptativos"
-# Esto ayuda a que si AWS dice "espera", el código espere solo y reintente.
+# Configuración de Boto3
 my_config = Config(
     region_name='us-east-1',
     retries = {
-        'max_attempts': 5,
-        'mode': 'adaptive'
+        'max_attempts': 2, # Bajamos los intentos internos para controlar nosotros la espera
+        'mode': 'standard'
     }
 )
 
@@ -26,7 +25,7 @@ bedrock_runtime = boto3.client(
 
 def invoke_with_retry(model_id, body):
     """
-    Función auxiliar: Intenta llamar al modelo hasta 3 veces si hay congestión.
+    Intenta llamar al modelo con esperas LARGAS para cuentas limitadas.
     """
     max_retries = 3
     for attempt in range(max_retries):
@@ -41,15 +40,15 @@ def invoke_with_retry(model_id, body):
         except ClientError as e:
             error_code = e.response['Error']['Code']
             
-            # Si el error es "Throttling" (Velocidad), esperamos y reintentamos
+            # Si es Throttling, esperamos MUCHO más tiempo
             if error_code == 'ThrottlingException':
                 if attempt < max_retries - 1:
-                    wait_time = (2 ** attempt) + random.uniform(0, 1) # Espera 1s, 2s, 4s...
-                    print(f"⚠️ AWS ocupado ({model_id}). Reintentando en {wait_time:.2f}s...")
+                    # Fórmula nueva: Espera 10s, luego 15s, luego 20s
+                    wait_time = 10 + (attempt * 5) 
+                    print(f"⏳ AWS nos pide esperar ({model_id}). Durmiendo {wait_time} segundos...")
                     time.sleep(wait_time)
                     continue
             
-            # Si es otro error (ej. AccessDenied), fallamos inmediatamente
             print(f"❌ Error fatal en AWS ({model_id}): {e}")
             return None
     return None
@@ -89,11 +88,8 @@ def generate_image(prompt, style_preset="photographic"):
 def edit_text_content(original_text, instruction):
     """
     Edita texto usando AMAZON TITAN TEXT EXPRESS v1.
-    Se usa este modelo para evitar los límites de cuota (Quota=0) en Claude.
     """
-    
-    # Prompt diseñado específicamente para Titan
-    prompt_input = f"User: Actúa como un editor experto. Texto original: '{original_text}'. Tarea: {instruction}. Devuelve SOLO el texto mejorado, sin introducciones.\nBot:"
+    prompt_input = f"User: Actúa como un editor experto. Texto original: '{original_text}'. Tarea: {instruction}. Devuelve SOLO el texto mejorado.\nBot:"
 
     body = json.dumps({
         "inputText": prompt_input,
@@ -105,13 +101,11 @@ def edit_text_content(original_text, instruction):
         }
     })
 
-    # Llamamos a Titan Text Express
     response = invoke_with_retry("amazon.titan-text-express-v1", body)
 
     if response:
         try:
             response_body = json.loads(response.get("body").read())
-            # Titan devuelve el texto en 'results' -> 'outputText'
             return response_body.get('results')[0].get('outputText').strip()
         except Exception as e:
             print(f"Error procesando texto: {e}")
