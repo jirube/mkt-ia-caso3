@@ -15,13 +15,9 @@ bedrock_runtime = boto3.client(
 def generate_image(prompt, style_preset="photographic"):
     """
     Genera imagen usando Amazon Titan Image Generator G1 V2.
-    CORRECCIÓN: Actualizado a 'amazon.titan-image-generator-v2:0'
     """
-    
-    # Construimos el Prompt enriquecido
     final_prompt = f"{prompt}. Artistic style: {style_preset}, high quality, detailed."
 
-    # Estructura JSON para Amazon Titan v2 (Idéntica a la v1)
     body = json.dumps({
         "taskType": "TEXT_IMAGE",
         "textToImageParams": {
@@ -39,13 +35,12 @@ def generate_image(prompt, style_preset="photographic"):
     try:
         response = bedrock_runtime.invoke_model(
             body=body,
-            modelId="amazon.titan-image-generator-v2:0", # <--- CAMBIO A V2
+            modelId="amazon.titan-image-generator-v2:0",
             accept="application/json",
             contentType="application/json"
         )
         
         response_body = json.loads(response.get("body").read())
-        # Titan devuelve la imagen en base64 dentro de una lista 'images'
         base64_image = response_body.get("images")[0]
         return base64_image
         
@@ -58,8 +53,8 @@ def generate_image(prompt, style_preset="photographic"):
 
 def edit_text_content(original_text, instruction):
     """
-    Edita texto usando Claude 3 Sonnet.
-    NOTA: Requiere haber enviado el formulario de caso de uso en AWS.
+    Edita texto usando Claude 3 Haiku (Más rápido y menos throttling).
+    CORRECCIÓN: Cambio de 'Sonnet' a 'Haiku'.
     """
     prompt_config = {
         "anthropic_version": "bedrock-2023-05-31",
@@ -77,7 +72,7 @@ def edit_text_content(original_text, instruction):
     try:
         response = bedrock_runtime.invoke_model(
             body=body,
-            modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+            modelId="anthropic.claude-3-haiku-20240307-v1:0", # <--- CAMBIO A HAIKU
             accept="application/json",
             contentType="application/json"
         )
