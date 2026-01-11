@@ -1,10 +1,9 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 import os
 import base64
 import datetime
-# Importamos las funciones del cliente de IA (que ahora usa Google + Pollinations)
 from bedrock_client import generate_image, edit_text_content
 
 app = Flask(__name__)
@@ -12,8 +11,6 @@ app.config['SECRET_KEY'] = 'clave-secreta-jimmy'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///marketing.db'
 app.config['UPLOAD_FOLDER'] = 'static/images'
 
-# --- CORRECCIÓN CRÍTICA: Crear carpeta de imágenes al iniciar ---
-# Esto soluciona el error "FileNotFoundError" en servidores nuevos como Render
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
@@ -22,11 +19,11 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- MODELOS DE BASE DE DATOS ---
+# --- MODELOS ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True)
-    role = db.Column(db.String(50)) # Roles: admin, disenador, redactor
+    role = db.Column(db.String(50))
 
 class ContentHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -36,25 +33,28 @@ class ContentHistory(db.Model):
     result_path_or_text = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
+# NUEVO: Tabla de Comentarios para Colaboración
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('content_history.id')) # Enlace al contenido
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id')) # Quién comentó
+    text = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- INICIALIZACIÓN DE DATOS (Usuarios de prueba) ---
+# --- INICIALIZAR DB ---
 with app.app_context():
     db.create_all()
-    # Creamos usuarios por defecto para la demo
-    users = [
-        ("JimmyAdmin", "admin"), 
-        ("AnaDiseno", "disenador"), 
-        ("LuisRedactor", "redactor")
-    ]
+    users = [("JimmyAdmin", "admin"), ("AnaDiseno", "disenador"), ("LuisRedactor", "redactor")]
     for name, role in users:
         if not User.query.filter_by(username=name).first():
             db.session.add(User(username=name, role=role))
     db.session.commit()
 
-# --- RUTAS ---
+# --- RUTAS BÁSICAS ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -77,92 +77,102 @@ def logout():
 def index():
     return render_template('dashboard.html', user=current_user)
 
+# --- RUTAS API GENERACIÓN ---
 @app.route('/api/generate-image', methods=['POST'])
 @login_required
 def api_gen_image():
-    # Control de Roles: Redactores no pueden crear imágenes
     if current_user.role == 'redactor':
-        return jsonify({"error": "⛔ Acceso Denegado: Tu rol de 'Redactor' no permite generar imágenes."}), 403
-
-    data = request.json
-    prompt = data.get('prompt')
-    style = data.get('style')
+        return jsonify({"error": "⛔ Rol no autorizado"}), 403
     
-    # 1. Generar imagen (Usa Pollinations vía bedrock_client)
-    img_base64 = generate_image(prompt, style)
+    data = request.json
+    img_base64 = generate_image(data.get('prompt'), data.get('style'))
     
     if img_base64:
-        # 2. Guardar archivo
         filename = f"img_{datetime.datetime.now().timestamp()}.png"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Doble verificación de carpeta para seguridad
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        
         with open(filepath, "wb") as fh:
             fh.write(base64.b64decode(img_base64))
         
-        # 3. Registrar en Historial
-        log = ContentHistory(user_id=current_user.id, action_type='image_gen', prompt_or_input=prompt, result_path_or_text=filename)
+        log = ContentHistory(user_id=current_user.id, action_type='image_gen', prompt_or_input=data.get('prompt'), result_path_or_text=filename)
         db.session.add(log)
         db.session.commit()
         return jsonify({"image_url": f"/static/images/{filename}", "status": "success"})
-    
-    return jsonify({"error": "Fallo al generar imagen externa"}), 500
+    return jsonify({"error": "Fallo generación"}), 500
 
 @app.route('/api/edit-text', methods=['POST'])
 @login_required
 def api_edit_text():
-    # Control de Roles: Diseñadores no pueden editar texto
     if current_user.role == 'disenador':
-        return jsonify({"error": "⛔ Acceso Denegado: Tu rol de 'Diseñador' no permite editar textos."}), 403
-
+        return jsonify({"error": "⛔ Rol no autorizado"}), 403
+    
     data = request.json
-    text = data.get('text')
-    instruction = data.get('instruction')
+    # Concatenamos la acción específica (ej. Traducir) con el texto
+    full_instruction = f"{data.get('action_type')}: {data.get('instruction', '')}"
+    new_text = edit_text_content(data.get('text'), full_instruction)
     
-    # 1. Editar texto (Usa Google Gemini vía bedrock_client)
-    new_text = edit_text_content(text, instruction)
-    
-    # 2. Registrar en Historial
-    log = ContentHistory(user_id=current_user.id, action_type='text_edit', prompt_or_input=text, result_path_or_text=new_text)
+    log = ContentHistory(user_id=current_user.id, action_type='text_edit', prompt_or_input=data.get('text'), result_path_or_text=new_text)
     db.session.add(log)
     db.session.commit()
-    
     return jsonify({"result": new_text})
 
-@app.route('/history')
+# --- RUTAS DE COLABORACIÓN (COMENTARIOS) ---
+@app.route('/api/add-comment', methods=['POST'])
 @login_required
-def get_history():
-    # Admin ve todo, usuarios ven solo lo suyo
-    if current_user.role == 'admin':
-        logs = ContentHistory.query.order_by(ContentHistory.timestamp.desc()).limit(20).all()
-    else:
-        logs = ContentHistory.query.filter_by(user_id=current_user.id).order_by(ContentHistory.timestamp.desc()).limit(10).all()
-        
+def add_comment():
+    data = request.json
+    new_comment = Comment(
+        content_id=data.get('content_id'),
+        user_id=current_user.id,
+        text=data.get('text')
+    )
+    db.session.add(new_comment)
+    db.session.commit()
+    return jsonify({"status": "success", "user": current_user.username, "date": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M")})
+
+@app.route('/api/get-comments/<int:content_id>')
+@login_required
+def get_comments(content_id):
+    comments = Comment.query.filter_by(content_id=content_id).order_by(Comment.timestamp.asc()).all()
     data = []
-    for l in logs:
-        u_name = User.query.get(l.user_id).username
+    for c in comments:
+        u = User.query.get(c.user_id)
         data.append({
-            "user": u_name, 
-            "action": l.action_type, 
-            "date": l.timestamp.strftime("%Y-%m-%d %H:%M"), 
-            "result": l.result_path_or_text
+            "user": u.username,
+            "text": c.text,
+            "date": c.timestamp.strftime("%Y-%m-%d %H:%M")
         })
     return jsonify(data)
 
-# --- RUTA DE DEBUG (Opcional, para verificar modelos Google) ---
-@app.route('/debug-google')
-def debug_google():
-    if not os.environ.get('GOOGLE_API_KEY'):
-        return "⚠️ No hay API Key de Google configurada."
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
-        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        return jsonify({"status": "OK", "modelos_disponibles": models})
-    except Exception as e:
-        return jsonify({"error": str(e)})
+# --- RUTAS DATOS ---
+@app.route('/api/history-full')
+@login_required
+def history_full():
+    # Devuelve historial con ID para poder comentar
+    query = ContentHistory.query.order_by(ContentHistory.timestamp.desc()).limit(50)
+    logs = query.all()
+    
+    data = []
+    for l in logs:
+        u_name = User.query.get(l.user_id).username
+        # Contamos cuántos comentarios tiene cada item
+        comment_count = Comment.query.filter_by(content_id=l.id).count()
+        
+        item = {
+            "id": l.id,
+            "user": u_name,
+            "action": l.action_type,
+            "date": l.timestamp.strftime("%Y-%m-%d %H:%M"),
+            "original": l.prompt_or_input,
+            "result": l.result_path_or_text,
+            "comments": comment_count
+        }
+        
+        if l.action_type == 'image_gen':
+            item['url'] = f"/static/images/{l.result_path_or_text}"
+        
+        data.append(item)
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

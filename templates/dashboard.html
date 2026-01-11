@@ -2,135 +2,217 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Marketing AI Suite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketing AI - Colaborativo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .tab-content { background: white; padding: 20px; border: 1px solid #dee2e6; border-top: none; }
+        .nav-link.active { background-color: #0d6efd !important; color: white !important; }
+        .gallery-img { height: 180px; object-fit: cover; width: 100%; cursor: pointer; }
+        .comment-box { max-height: 300px; overflow-y: auto; background: #f1f3f5; padding: 10px; border-radius: 5px; }
     </style>
 </head>
-<body>
+<body class="bg-light">
 
-<nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1">🚀 Marketing AI</span>
-        <span class="text-white">
-            Hola, <strong>{{ user.username }}</strong> 
-            <span class="badge bg-warning text-dark">{{ user.role }}</span>
-            <a href="/logout" class="btn btn-sm btn-outline-light ms-3">Cerrar Sesión</a>
-        </span>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">🚀 Marketing AI Team</a>
+        <div class="d-flex text-white align-items-center">
+            <span class="me-3">{{ user.username }} ({{ user.role }})</span>
+            <a href="/logout" class="btn btn-outline-danger btn-sm">Salir</a>
+        </div>
     </div>
 </nav>
 
-<div class="container">
-    
-    <ul class="nav nav-tabs" id="myTab" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#image">🎨 Generación de Imágenes</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#text">📝 Edición de Texto</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#history" onclick="loadHistory()">🕒 Auditoría</button>
-        </li>
+<div class="container mt-4">
+    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pills-img">🎨 Imágenes</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-text">📝 Texto Avanzado</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-collab" onclick="loadCollab()">🤝 Colaboración & Historial</button></li>
     </ul>
 
-    <div class="tab-content" id="myTabContent">
-        <div class="tab-pane fade show active" id="image">
-            <div class="row">
-                <div class="col-md-5">
-                    <label class="form-label">Prompt:</label>
-                    <textarea id="imgPrompt" class="form-control mb-3" rows="3"></textarea>
-                    <label class="form-label">Estilo:</label>
-                    <select id="imgStyle" class="form-select mb-3">
-                        <option value="photographic">Fotorealista</option>
-                        <option value="anime">Anime</option>
-                        <option value="3d-model">3D</option>
-                    </select>
-                    <button class="btn btn-primary w-100" onclick="generateImage()">Generar Imagen</button>
+    <div class="tab-content" id="pills-tabContent">
+        
+        <div class="tab-pane fade show active" id="pills-img">
+            <div class="card shadow-sm p-3">
+                <h5>Generador Visual</h5>
+                <div class="row">
+                    <div class="col-md-9"><input type="text" id="imgPrompt" class="form-control" placeholder="Describe la imagen..."></div>
+                    <div class="col-md-3">
+                        <select id="imgStyle" class="form-select">
+                            <option value="photographic">Fotográfico</option>
+                            <option value="cinematic">Cinemático</option>
+                            <option value="anime">Anime</option>
+                            <option value="3d-model">3D Model</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-7 text-center border rounded d-flex align-items-center justify-content-center bg-light">
-                    <div id="imgResult" class="p-3">La imagen aparecerá aquí...</div>
-                </div>
+                <button class="btn btn-primary mt-2 w-100" onclick="generateImage()">✨ Generar</button>
+                <div id="imgLoading" class="text-center mt-2" style="display:none;"><div class="spinner-border text-primary"></div></div>
+                <div class="mt-3 text-center"><img id="imgResult" src="" class="img-fluid rounded shadow" style="display:none; max-height: 400px;"></div>
             </div>
         </div>
 
-        <div class="tab-pane fade" id="text">
-            <div class="row">
-                <div class="col-md-6">
-                    <textarea id="txtInput" class="form-control mb-3" rows="6" placeholder="Texto a editar..."></textarea>
-                    <select id="txtAction" class="form-select mb-3">
-                        <option value="Resumir">Resumir</option>
-                        <option value="Corregir">Corregir</option>
-                        <option value="Expandir">Expandir</option>
+        <div class="tab-pane fade" id="pills-text">
+            <div class="card shadow-sm p-3">
+                <h5>Editor de Texto Inteligente</h5>
+                <textarea id="txtInput" class="form-control mb-3" rows="4" placeholder="Pega tu texto aquí..."></textarea>
+                
+                <label class="form-label">¿Qué quieres hacer?</label>
+                <div class="input-group mb-3">
+                    <select id="txtAction" class="form-select">
+                        <option value="Resumir">Resumir contenido</option>
+                        <option value="Traducir al Inglés">Traducir al Inglés</option>
+                        <option value="Expandir">Expandir / Detallar más</option>
+                        <option value="Corregir Estilo">Corregir ortografía y estilo</option>
+                        <option value="Tono Marketing">Cambiar a tono de venta (Marketing)</option>
+                        <option value="Personalizado">Instrucción Personalizada...</option>
                     </select>
-                    <button class="btn btn-success w-100" onclick="processText()">Procesar Texto</button>
+                    <input type="text" id="txtCustom" class="form-control" placeholder="Detalle extra (opcional)...">
                 </div>
-                <div class="col-md-6">
-                    <div id="txtResult" class="p-3 border rounded bg-white" style="min-height: 200px;">Resultado...</div>
-                </div>
+
+                <button class="btn btn-success w-100" onclick="editText()">🖊️ Ejecutar Acción</button>
+                <div id="txtLoading" class="text-center mt-2" style="display:none;"><div class="spinner-border text-success"></div></div>
+                <div class="mt-3 p-3 bg-white border rounded"><strong>Resultado:</strong><p id="txtResult" class="mt-2 text-muted">Waiting...</p></div>
             </div>
         </div>
 
-        <div class="tab-pane fade" id="history">
-            <table class="table table-hover">
-                <thead class="table-dark"><tr><th>Usuario</th><th>Fecha</th><th>Acción</th><th>Detalle</th></tr></thead>
-                <tbody id="historyTable"></tbody>
-            </table>
+        <div class="tab-pane fade" id="pills-collab">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Tablero de Equipo (Comentarios y Versiones)</h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="loadCollab()">🔄 Refrescar</button>
+            </div>
+            <div class="row" id="collabContainer"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="commentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">💬 Comentarios del Equipo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="currentContentId">
+                <div id="commentsList" class="comment-box mb-3">Cargando...</div>
+                <div class="input-group">
+                    <input type="text" id="newComment" class="form-control" placeholder="Escribe un comentario...">
+                    <button class="btn btn-primary" onclick="postComment()">Enviar</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-async function generateImage() {
-    const resDiv = document.getElementById('imgResult');
-    resDiv.innerHTML = 'Generando...';
-    try {
-        const res = await fetch('/api/generate-image', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                prompt: document.getElementById('imgPrompt').value,
-                style: document.getElementById('imgStyle').value
-            })
-        });
+    // --- IMAGEN ---
+    async function generateImage() {
+        const prompt = document.getElementById('imgPrompt').value;
+        const style = document.getElementById('imgStyle').value;
+        if(!prompt) return alert("Falta prompt");
+        document.getElementById('imgLoading').style.display = 'block';
+        try {
+            const res = await fetch('/api/generate-image', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prompt, style})
+            });
+            const data = await res.json();
+            if(data.error) alert(data.error);
+            else {
+                document.getElementById('imgResult').src = data.image_url;
+                document.getElementById('imgResult').style.display = 'block';
+            }
+        } catch(e) { alert("Error"); }
+        finally { document.getElementById('imgLoading').style.display = 'none'; }
+    }
+
+    // --- TEXTO ---
+    async function editText() {
+        const text = document.getElementById('txtInput').value;
+        const action_type = document.getElementById('txtAction').value;
+        const instruction = document.getElementById('txtCustom').value;
+        if(!text) return alert("Falta texto");
+        document.getElementById('txtLoading').style.display = 'block';
+        try {
+            const res = await fetch('/api/edit-text', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text, action_type, instruction})
+            });
+            const data = await res.json();
+            document.getElementById('txtResult').innerText = data.result;
+        } catch(e) { alert("Error"); }
+        finally { document.getElementById('txtLoading').style.display = 'none'; }
+    }
+
+    // --- COLABORACIÓN ---
+    async function loadCollab() {
+        const container = document.getElementById('collabContainer');
+        container.innerHTML = 'Cargando...';
+        const res = await fetch('/api/history-full');
         const data = await res.json();
-        if(data.image_url) {
-            resDiv.innerHTML = `<img src="${data.image_url}" class="img-fluid" style="max-height:300px;">`;
-        } else {
-            // Muestra el error de permisos si ocurre
-            resDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-        }
-    } catch(e) { resDiv.innerHTML = "Error de red"; }
-}
+        container.innerHTML = '';
+        
+        data.forEach(item => {
+            let contentDisplay = '';
+            if (item.action === 'image_gen') {
+                contentDisplay = `<img src="${item.url}" class="card-img-top gallery-img">`;
+            } else {
+                contentDisplay = `<div class="p-3 bg-light text-muted small" style="height:180px; overflow:hidden;">${item.result}</div>`;
+            }
 
-async function processText() {
-    const resDiv = document.getElementById('txtResult');
-    resDiv.innerText = 'Procesando...';
-    const res = await fetch('/api/edit-text', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            text: document.getElementById('txtInput').value,
-            instruction: document.getElementById('txtAction').value
-        })
-    });
-    const data = await res.json();
-    if (data.error) resDiv.innerHTML = `<div class="text-danger fw-bold">${data.error}</div>`;
-    else resDiv.innerText = data.result;
-}
+            const card = `
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        ${contentDisplay}
+                        <div class="card-body">
+                            <h6 class="card-title badge bg-${item.action === 'image_gen' ? 'primary' : 'success'}">${item.action}</h6>
+                            <p class="card-text small text-muted">Por: ${item.user} | ${item.date}</p>
+                            <button class="btn btn-outline-dark btn-sm w-100" onclick="openComments(${item.id})">
+                                💬 Comentarios (${item.comments})
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += card;
+        });
+    }
 
-async function loadHistory() {
-    const res = await fetch('/history');
-    const data = await res.json();
-    const tbody = document.getElementById('historyTable');
-    tbody.innerHTML = "";
-    data.forEach(item => {
-        tbody.innerHTML += `<tr><td><strong>${item.user}</strong></td><td>${item.date}</td><td>${item.action}</td><td>${item.result.substring(0,50)}...</td></tr>`;
-    });
-}
+    // --- SISTEMA DE COMENTARIOS ---
+    let myModal;
+    function openComments(id) {
+        document.getElementById('currentContentId').value = id;
+        myModal = new bootstrap.Modal(document.getElementById('commentModal'));
+        myModal.show();
+        fetchComments(id);
+    }
+
+    async function fetchComments(id) {
+        const list = document.getElementById('commentsList');
+        list.innerHTML = 'Cargando...';
+        const res = await fetch(`/api/get-comments/${id}`);
+        const data = await res.json();
+        list.innerHTML = '';
+        if(data.length === 0) list.innerHTML = '<p class="text-muted text-center">Sin comentarios aún.</p>';
+        data.forEach(c => {
+            list.innerHTML += `<div class="mb-2 border-bottom pb-1"><strong>${c.user}</strong> <small class="text-muted">${c.date}</small><br>${c.text}</div>`;
+        });
+    }
+
+    async function postComment() {
+        const id = document.getElementById('currentContentId').value;
+        const text = document.getElementById('newComment').value;
+        if(!text) return;
+        
+        await fetch('/api/add-comment', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content_id: id, text})
+        });
+        document.getElementById('newComment').value = '';
+        fetchComments(id); // Recargar lista
+        loadCollab(); // Actualizar contador en tarjeta
+    }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
