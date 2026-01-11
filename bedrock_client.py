@@ -4,7 +4,7 @@ import base64
 import os
 from botocore.exceptions import ClientError
 
-# Configuración segura: Lee las claves del entorno del servidor (Render)
+# Configuración segura: Lee las claves del entorno del servidor
 bedrock_runtime = boto3.client(
     service_name='bedrock-runtime',
     region_name='us-east-1',
@@ -15,6 +15,7 @@ bedrock_runtime = boto3.client(
 def generate_image(prompt, style_preset="photographic"):
     """
     Genera imagen usando Stable Diffusion XL.
+    CORRECCIÓN: Se actualizó el modelId a la versión exacta ':0'
     """
     body = json.dumps({
         "text_prompts": [{"text": prompt}],
@@ -26,7 +27,7 @@ def generate_image(prompt, style_preset="photographic"):
     try:
         response = bedrock_runtime.invoke_model(
             body=body,
-            modelId="stability.stable-diffusion-xl-v1",
+            modelId="stability.stable-diffusion-xl-v1:0",  # <--- AQUÍ ESTÁ EL CAMBIO
             accept="application/json",
             contentType="application/json"
         )
@@ -39,7 +40,7 @@ def generate_image(prompt, style_preset="photographic"):
 
 def edit_text_content(original_text, instruction):
     """
-    Edita texto usando Claude 3 (o v2).
+    Edita texto usando Claude 3 Sonnet.
     """
     prompt_config = {
         "anthropic_version": "bedrock-2023-05-31",
@@ -55,10 +56,9 @@ def edit_text_content(original_text, instruction):
     body = json.dumps(prompt_config)
 
     try:
-        # Nota: Asegúrate de tener acceso a este modelo en Bedrock o cambia a 'anthropic.claude-v2'
         response = bedrock_runtime.invoke_model(
             body=body,
-            modelId="anthropic.claude-3-sonnet-20240229-v1:0", 
+            modelId="anthropic.claude-3-sonnet-20240229-v1:0",
             accept="application/json",
             contentType="application/json"
         )
@@ -66,4 +66,4 @@ def edit_text_content(original_text, instruction):
         return response_body.get("content")[0].get("text")
     except ClientError as e:
         print(f"Error editando texto: {e}")
-        return f"Error de conexión con AWS: {str(e)}"
+        return f"Error de conexión con AWS (Texto): {str(e)}"
