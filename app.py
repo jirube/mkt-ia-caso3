@@ -4,6 +4,7 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, cur
 import os
 import base64
 import datetime
+# Importamos las funciones del cliente de IA (que ahora usa Google + Pollinations)
 from bedrock_client import generate_image, edit_text_content
 
 app = Flask(__name__)
@@ -11,7 +12,8 @@ app.config['SECRET_KEY'] = 'clave-secreta-jimmy'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///marketing.db'
 app.config['UPLOAD_FOLDER'] = 'static/images'
 
-# --- CREAR CARPETA SI NO EXISTE (CORRECCIÓN CRÍTICA) ---
+# --- CORRECCIÓN CRÍTICA: Crear carpeta de imágenes al iniciar ---
+# Esto soluciona el error "FileNotFoundError" en servidores nuevos como Render
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
@@ -20,11 +22,11 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- MODELOS BD ---
+# --- MODELOS DE BASE DE DATOS ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True)
-    role = db.Column(db.String(50))
+    role = db.Column(db.String(50)) # Roles: admin, disenador, redactor
 
 class ContentHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -38,10 +40,15 @@ class ContentHistory(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- SEED DE DATOS ---
+# --- INICIALIZACIÓN DE DATOS (Usuarios de prueba) ---
 with app.app_context():
     db.create_all()
-    users = [("JimmyAdmin", "admin"), ("AnaDiseno", "disenador"), ("LuisRedactor", "redactor")]
+    # Creamos usuarios por defecto para la demo
+    users = [
+        ("JimmyAdmin", "admin"), 
+        ("AnaDiseno", "disenador"), 
+        ("LuisRedactor", "redactor")
+    ]
     for name, role in users:
         if not User.query.filter_by(username=name).first():
             db.session.add(User(username=name, role=role))
@@ -73,6 +80,7 @@ def index():
 @app.route('/api/generate-image', methods=['POST'])
 @login_required
 def api_gen_image():
+    # Control de Roles: Redactores no pueden crear imágenes
     if current_user.role == 'redactor':
         return jsonify({"error": "⛔ Acceso Denegado: Tu rol de 'Redactor' no permite generar imágenes."}), 403
 
@@ -80,21 +88,21 @@ def api_gen_image():
     prompt = data.get('prompt')
     style = data.get('style')
     
-    # 1. Llamamos a la función de generación (Pollinations)
+    # 1. Generar imagen (Usa Pollinations vía bedrock_client)
     img_base64 = generate_image(prompt, style)
     
     if img_base64:
-        # 2. Guardamos el archivo
+        # 2. Guardar archivo
         filename = f"img_{datetime.datetime.now().timestamp()}.png"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
-        # Aseguramos de nuevo que la carpeta exista antes de guardar
+        # Doble verificación de carpeta para seguridad
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         with open(filepath, "wb") as fh:
             fh.write(base64.b64decode(img_base64))
         
-        # 3. Guardamos en BD
+        # 3. Registrar en Historial
         log = ContentHistory(user_id=current_user.id, action_type='image_gen', prompt_or_input=prompt, result_path_or_text=filename)
         db.session.add(log)
         db.session.commit()
@@ -105,6 +113,7 @@ def api_gen_image():
 @app.route('/api/edit-text', methods=['POST'])
 @login_required
 def api_edit_text():
+    # Control de Roles: Diseñadores no pueden editar texto
     if current_user.role == 'disenador':
         return jsonify({"error": "⛔ Acceso Denegado: Tu rol de 'Diseñador' no permite editar textos."}), 403
 
@@ -112,8 +121,10 @@ def api_edit_text():
     text = data.get('text')
     instruction = data.get('instruction')
     
+    # 1. Editar texto (Usa Google Gemini vía bedrock_client)
     new_text = edit_text_content(text, instruction)
     
+    # 2. Registrar en Historial
     log = ContentHistory(user_id=current_user.id, action_type='text_edit', prompt_or_input=text, result_path_or_text=new_text)
     db.session.add(log)
     db.session.commit()
@@ -123,15 +134,35 @@ def api_edit_text():
 @app.route('/history')
 @login_required
 def get_history():
+    # Admin ve todo, usuarios ven solo lo suyo
     if current_user.role == 'admin':
         logs = ContentHistory.query.order_by(ContentHistory.timestamp.desc()).limit(20).all()
     else:
         logs = ContentHistory.query.filter_by(user_id=current_user.id).order_by(ContentHistory.timestamp.desc()).limit(10).all()
+        
     data = []
     for l in logs:
         u_name = User.query.get(l.user_id).username
-        data.append({"user": u_name, "action": l.action_type, "date": l.timestamp.strftime("%Y-%m-%d %H:%M"), "result": l.result_path_or_text})
+        data.append({
+            "user": u_name, 
+            "action": l.action_type, 
+            "date": l.timestamp.strftime("%Y-%m-%d %H:%M"), 
+            "result": l.result_path_or_text
+        })
     return jsonify(data)
+
+# --- RUTA DE DEBUG (Opcional, para verificar modelos Google) ---
+@app.route('/debug-google')
+def debug_google():
+    if not os.environ.get('GOOGLE_API_KEY'):
+        return "⚠️ No hay API Key de Google configurada."
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
+        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        return jsonify({"status": "OK", "modelos_disponibles": models})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
