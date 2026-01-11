@@ -2,5 +2,5 @@ flask
 flask-sqlalchemy
 flask-login
 gunicorn
-google-generativeai
+google-generativeai>=0.7.0
 requests
