@@ -1,0 +1,6 @@
+flask
+boto3
+flask-login
+flask-sqlalchemy
+pillow
+gunicorn

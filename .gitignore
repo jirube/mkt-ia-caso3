@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+instance/
+.env
+marketing.db
+static/images/*
+!static/images/.gitkeep
+.DS_Store
