@@ -35,14 +35,14 @@ def generate_image(prompt, style_preset="photographic"):
 
 def edit_text_content(original_text, instruction):
     """
-    Edita texto usando GOOGLE GEMINI 1.5 FLASH.
+    Edita texto usando GOOGLE GEMINI 2.5 FLASH.
     """
     if not GOOGLE_KEY:
         return "Error: Falta la variable GOOGLE_API_KEY en Render."
 
     try:
-        # Intentamos usar el modelo más reciente y ligero
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # CORRECCIÓN: Usamos el modelo exacto que salió en tu lista
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         prompt = f"Actúa como un editor experto. Texto original: '{original_text}'. Instrucción: {instruction}. Devuelve SOLO el resultado editado."
         
@@ -52,5 +52,4 @@ def edit_text_content(original_text, instruction):
         
     except Exception as e:
         print(f"Error Gemini: {e}")
-        # Si falla, devolvemos el mensaje para verlo en pantalla
         return f"Error Google AI: {str(e)}"
