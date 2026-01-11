@@ -14,13 +14,14 @@ bedrock_runtime = boto3.client(
 
 def generate_image(prompt, style_preset="photographic"):
     """
-    Genera imagen usando Amazon Titan Image Generator G1.
+    Genera imagen usando Amazon Titan Image Generator G1 V2.
+    CORRECCIÓN: Actualizado a 'amazon.titan-image-generator-v2:0'
     """
     
     # Construimos el Prompt enriquecido
     final_prompt = f"{prompt}. Artistic style: {style_preset}, high quality, detailed."
 
-    # Estructura JSON para Amazon Titan
+    # Estructura JSON para Amazon Titan v2 (Idéntica a la v1)
     body = json.dumps({
         "taskType": "TEXT_IMAGE",
         "textToImageParams": {
@@ -38,7 +39,7 @@ def generate_image(prompt, style_preset="photographic"):
     try:
         response = bedrock_runtime.invoke_model(
             body=body,
-            modelId="amazon.titan-image-generator-v1",
+            modelId="amazon.titan-image-generator-v2:0", # <--- CAMBIO A V2
             accept="application/json",
             contentType="application/json"
         )
@@ -58,6 +59,7 @@ def generate_image(prompt, style_preset="photographic"):
 def edit_text_content(original_text, instruction):
     """
     Edita texto usando Claude 3 Sonnet.
+    NOTA: Requiere haber enviado el formulario de caso de uso en AWS.
     """
     prompt_config = {
         "anthropic_version": "bedrock-2023-05-31",
