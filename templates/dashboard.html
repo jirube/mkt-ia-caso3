@@ -32,6 +32,7 @@
     </ul>
 
     <div class="tab-content" id="pills-tabContent">
+        
         <div class="tab-pane fade show active" id="pills-img">
             <div class="card shadow-sm p-3">
                 <h5>Generador Visual</h5>
@@ -60,12 +61,13 @@
                         <option value="Resumir">Resumir</option>
                         <option value="Traducir al Inglés">Traducir al Inglés</option>
                         <option value="Corregir Estilo">Corregir Estilo</option>
+                        <option value="Tono Marketing">Tono Marketing</option>
                     </select>
-                    <input type="text" id="txtCustom" class="form-control" placeholder="Extra...">
+                    <input type="text" id="txtCustom" class="form-control" placeholder="Instrucción extra...">
                 </div>
-                <button class="btn btn-success w-100" onclick="editText()">🖊️ Ejecutar</button>
+                <button class="btn btn-success w-100" onclick="editText()">🖊️ Ejecutar Acción</button>
                 <div id="txtLoading" class="text-center mt-2" style="display:none;"><div class="spinner-border text-success"></div></div>
-                <div class="mt-3 p-3 bg-white border rounded"><p id="txtResult" class="mt-2 text-muted">Waiting...</p></div>
+                <div class="mt-3 p-3 bg-white border rounded"><p id="txtResult" class="mt-2 text-muted">Aquí saldrá el resultado...</p></div>
             </div>
         </div>
 
@@ -75,6 +77,7 @@
         </div>
         
         <div class="tab-pane fade" id="pills-gallery">
+            <div class="d-flex justify-content-between align-items-center mb-3"><h5>Mis Imágenes</h5><button class="btn btn-sm btn-outline-secondary" onclick="loadGallery()">🔄 Refrescar</button></div>
             <div class="row" id="galleryContainer"></div>
         </div>
     </div>
@@ -83,35 +86,20 @@
 <footer class="bg-white border-top mt-5 py-3 text-center">
     <div class="container">
         <small class="text-muted">© 2026 Marketing AI Project.</small>
-        <button class="btn btn-link btn-sm text-decoration-none" data-bs-toggle="modal" data-bs-target="#ethicsModal">
-            ⚖️ Políticas de Uso Ético y Privacidad
-        </button>
+        <button class="btn btn-link btn-sm text-decoration-none" data-bs-toggle="modal" data-bs-target="#ethicsModal">⚖️ Políticas de Uso Ético</button>
     </div>
 </footer>
 
 <div class="modal fade" id="ethicsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title">⚖️ Consideraciones Éticas y de Seguridad (4.4)</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-light"><h5 class="modal-title">⚖️ Ética y Seguridad</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <h6>1. Privacidad y Seguridad de Datos</h6>
-                <p class="small text-muted">Todo el contenido generado se transmite mediante protocolos seguros (HTTPS). Las credenciales de acceso se almacenan utilizando algoritmos de hashing robustos (SHA-256) y nunca en texto plano.</p>
-                
-                <h6>2. Mitigación de Sesgos</h6>
-                <p class="small text-muted">Esta herramienta utiliza modelos de IA (Gemini/Pollinations) ajustados para minimizar sesgos raciales o de género. Los usuarios deben reportar cualquier resultado discriminatorio.</p>
-                
-                <h6>3. Derechos de Autor</h6>
-                <p class="small text-muted">El usuario es responsable de verificar la propiedad intelectual de los inputs. El contenido generado es para uso interno de marketing y no debe infringir marcas registradas.</p>
-                
-                <h6>4. Moderación de Contenido</h6>
-                <p class="small text-muted text-danger"><strong>Advertencia:</strong> El sistema cuenta con filtros automáticos que bloquean la generación de violencia, discurso de odio o contenido explícito. El uso indebido será registrado.</p>
+                <h6>1. Seguridad</h6><p class="small text-muted">Datos cifrados (SHA-256) y transmisión segura.</p>
+                <h6>2. Moderación</h6><p class="small text-muted text-danger">Filtros activos contra violencia y odio.</p>
+                <h6>3. Derechos</h6><p class="small text-muted">El usuario es responsable del uso del contenido generado.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendido</button>
-            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendido</button></div>
         </div>
     </div>
 </div>
@@ -123,60 +111,141 @@
             <div class="modal-body">
                 <input type="hidden" id="currentContentId">
                 <div id="commentsList" class="comment-box mb-3"></div>
-                <div class="input-group"><input type="text" id="newComment" class="form-control" placeholder="Comentario..."><button class="btn btn-primary" onclick="postComment()">Enviar</button></div>
+                <div class="input-group"><input type="text" id="newComment" class="form-control" placeholder="Escribir..."><button class="btn btn-primary" onclick="postComment()">Enviar</button></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // JS BÁSICO (Versión compacta)
+    // --- LÓGICA DE IMAGEN ---
     async function generateImage() {
         const prompt = document.getElementById('imgPrompt').value;
         const style = document.getElementById('imgStyle').value;
-        if(!prompt) return alert("Falta prompt");
-        document.getElementById('imgLoading').style.display='block';
+        if(!prompt) return alert("Escribe un prompt");
+        document.getElementById('imgLoading').style.display = 'block';
         try {
-            const res = await fetch('/api/generate-image', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt, style})});
+            const res = await fetch('/api/generate-image', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prompt, style})
+            });
             const data = await res.json();
-            if(data.error) alert("⛔ " + data.error); // Muestra el error de moderación
-            else { document.getElementById('imgResult').src=data.image_url; document.getElementById('imgResult').style.display='block'; }
-        } catch(e){ alert("Error"); } finally { document.getElementById('imgLoading').style.display='none'; }
+            if(data.error) alert("⛔ " + data.error);
+            else {
+                document.getElementById('imgResult').src = data.image_url;
+                document.getElementById('imgResult').style.display = 'block';
+            }
+        } catch(e) { alert("Error de conexión"); } 
+        finally { document.getElementById('imgLoading').style.display = 'none'; }
     }
 
+    // --- LÓGICA DE TEXTO ---
     async function editText() {
         const text = document.getElementById('txtInput').value;
         const action_type = document.getElementById('txtAction').value;
-        if(!text) return alert("Falta texto");
-        document.getElementById('txtLoading').style.display='block';
+        const instruction = document.getElementById('txtCustom').value;
+        if(!text) return alert("Escribe texto");
+        document.getElementById('txtLoading').style.display = 'block';
         try {
-            const res = await fetch('/api/edit-text', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text, action_type})});
+            const res = await fetch('/api/edit-text', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text, action_type, instruction})
+            });
             const data = await res.json();
             if(data.error) alert("⛔ " + data.error);
-            else document.getElementById('txtResult').innerText=data.result;
-        } catch(e){ alert("Error"); } finally { document.getElementById('txtLoading').style.display='none'; }
+            else document.getElementById('txtResult').innerText = data.result;
+        } catch(e) { alert("Error"); }
+        finally { document.getElementById('txtLoading').style.display = 'none'; }
     }
-    
-    // Funciones de carga (Igual que antes)
+
+    // --- COLABORACIÓN ---
     async function loadCollab() {
-        const c = document.getElementById('collabContainer'); c.innerHTML='Cargando...';
-        const res = await fetch('/api/history-full'); const data = await res.json(); c.innerHTML='';
-        data.forEach(i => {
-            let disp = i.action==='image_gen' ? `<img src="${i.url}" class="card-img-top gallery-img">` : `<div class="p-3 bg-light text-muted small" style="height:180px; overflow:hidden;">${i.result}</div>`;
-            c.innerHTML += `<div class="col-md-4 mb-4"><div class="card h-100 shadow-sm">${disp}<div class="card-body"><h6 class="badge bg-${i.action==='image_gen'?'primary':'success'}">${i.action}</h6><p class="small text-muted">${i.user} | ${i.date}</p><button class="btn btn-outline-dark btn-sm w-100" onclick="openComments(${i.id})">💬 (${i.comments})</button></div></div></div>`;
-        });
+        const c = document.getElementById('collabContainer');
+        c.innerHTML = '<div class="text-center w-100">Cargando...</div>';
+        try {
+            const res = await fetch('/api/history-full');
+            const data = await res.json();
+            c.innerHTML = '';
+            if(data.length===0) { c.innerHTML='<div class="alert alert-info">Sin datos aún.</div>'; return; }
+            
+            data.forEach(i => {
+                let disp = i.action === 'image_gen' 
+                    ? `<img src="${i.url}" class="card-img-top gallery-img">` 
+                    : `<div class="p-3 bg-light text-muted small" style="height:180px; overflow:hidden;">${i.result}</div>`;
+                
+                c.innerHTML += `
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        ${disp}
+                        <div class="card-body">
+                            <h6 class="badge bg-${i.action === 'image_gen' ? 'primary' : 'success'}">${i.action}</h6>
+                            <p class="small text-muted mb-2">${i.user} | ${i.date}</p>
+                            <button class="btn btn-outline-dark btn-sm w-100" onclick="openComments(${i.id})">💬 Comentarios (${i.comments})</button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        } catch(e) { c.innerHTML = '<div class="alert alert-danger">Error cargando datos.</div>'; }
     }
 
+    // --- GALERÍA ---
     async function loadGallery() {
-        const c = document.getElementById('galleryContainer'); c.innerHTML='Cargando...';
-        const res = await fetch('/api/my-images'); const data = await res.json(); c.innerHTML='';
-        data.forEach(i => c.innerHTML += `<div class="col-md-3 mb-3"><div class="card"><img src="${i.url}" class="card-img-top"><div class="card-body p-2"><a href="${i.url}" download class="btn btn-sm btn-primary w-100">Descargar</a></div></div></div>`);
+        const c = document.getElementById('galleryContainer');
+        c.innerHTML = '<div class="text-center w-100">Cargando...</div>';
+        try {
+            const res = await fetch('/api/my-images');
+            const data = await res.json();
+            c.innerHTML = '';
+            if(data.length===0) { c.innerHTML='<div class="alert alert-info">No hay imágenes.</div>'; return; }
+
+            data.forEach(i => {
+                c.innerHTML += `
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <img src="${i.url}" class="card-img-top gallery-img">
+                        <div class="card-body p-2 text-center">
+                            <small class="d-block text-truncate mb-2">${i.prompt}</small>
+                            <a href="${i.url}" download class="btn btn-sm btn-primary w-100">Descargar</a>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        } catch(e) { c.innerHTML='Error'; }
     }
 
-    // Comentarios
-    function openComments(id) { document.getElementById('currentContentId').value=id; new bootstrap.Modal(document.getElementById('commentModal')).show(); fetchComments(id); }
-    async function fetchComments(id) { const l=document.getElementById('commentsList'); l.innerHTML='...'; const res=await fetch(\`/api/get-comments/\${id}\`); const d=await res.json(); l.innerHTML=''; d.forEach(c=>l.innerHTML+=`<div class="border-bottom mb-2"><b>${c.user}</b>: ${c.text}</div>`); }
-    async function postComment() { const id=document.getElementById('currentContentId').value, text=document.getElementById('newComment').value; if(!text)return; await fetch('/api/add-comment', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content_id:id, text})}); document.getElementById('newComment').value=''; fetchComments(id); }
+    // --- COMENTARIOS ---
+    function openComments(id) {
+        document.getElementById('currentContentId').value = id;
+        new bootstrap.Modal(document.getElementById('commentModal')).show();
+        fetchComments(id);
+    }
+
+    async function fetchComments(id) {
+        const l = document.getElementById('commentsList');
+        l.innerHTML = 'Cargando...';
+        const res = await fetch(`/api/get-comments/${id}`);
+        const data = await res.json();
+        l.innerHTML = '';
+        if(data.length === 0) l.innerHTML = '<p class="text-muted text-center small">Sé el primero en comentar.</p>';
+        data.forEach(c => l.innerHTML += `<div class="border-bottom mb-2 pb-1"><strong>${c.user}</strong> <span class="text-muted small">${c.date}</span><br>${c.text}</div>`);
+    }
+
+    async function postComment() {
+        const id = document.getElementById('currentContentId').value;
+        const text = document.getElementById('newComment').value;
+        if(!text) return;
+        
+        await fetch('/api/add-comment', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content_id: id, text})
+        });
+        document.getElementById('newComment').value = '';
+        fetchComments(id);
+        loadCollab(); 
+    }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
