@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,7 +42,7 @@
         .bg-grid {
             position: fixed;
             inset: 0;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
             background-size: 50px 50px;
@@ -49,8 +50,13 @@
         }
 
         @keyframes gridMove {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(50px, 50px);
+            }
         }
 
         .bg-orb {
@@ -79,8 +85,15 @@
         }
 
         @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(30px, 30px) scale(1.1); }
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            50% {
+                transform: translate(30px, 30px) scale(1.1);
+            }
         }
 
         /* Login Card */
@@ -229,7 +242,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -277,6 +290,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="bg-grid"></div>
     <div class="bg-orb bg-orb-1"></div>
@@ -293,9 +307,9 @@
             {% if error %}
             <div class="alert-error">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 {{ error }}
             </div>
@@ -313,7 +327,8 @@
 
                 <div class="form-group">
                     <label class="form-label">Contraseña</label>
-                    <input type="password" name="password" class="form-input" placeholder="Ingresa tu contraseña" required>
+                    <input type="password" name="password" class="form-input" placeholder="Ingresa tu contraseña"
+                        required>
                     <p class="form-hint">Demo: admin123 | diseno123 | redactor123</p>
                 </div>
 
@@ -325,12 +340,17 @@
             <div class="login-footer">
                 <div class="security-badge">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
                     Protegido con cifrado PBKDF2-SHA256
                 </div>
+                <p style="margin-top: 16px; font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+                    Desarrollado por <strong style="color: var(--accent-cyan);">Jimmy Rugel B.</strong><br>
+                    Caso Práctico 3 — IA Generativa
+                </p>
             </div>
         </div>
     </div>
 </body>
+
 </html>
