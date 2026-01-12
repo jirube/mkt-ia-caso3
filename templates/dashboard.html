@@ -809,6 +809,9 @@
             <button class="tab-btn" data-tab="gallery" onclick="loadGallery()">
                 <span class="tab-icon">🖼️</span> Galería
             </button>
+            <button class="tab-btn" data-tab="history" onclick="loadAllHistory()">
+                <span class="tab-icon">📜</span> Historial
+            </button>
         </div>
 
         <!-- Tab: Images -->
@@ -927,6 +930,46 @@
                 </div>
                 <div class="grid grid-4" id="galleryContainer">
                     <div class="alert alert-info">Cargando imágenes...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: History -->
+        <div class="tab-content" id="tab-history">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-title-icon">📜</div>
+                        Historial de Actividad
+                    </h2>
+                    <button class="btn btn-secondary" onclick="loadAllHistory()">🔄 Actualizar</button>
+                </div>
+                <p style="margin-bottom: 16px; font-size: 13px; color: var(--text-muted);">
+                    {% if user.role == 'admin' %}
+                    <span style="color: var(--accent-cyan);">👑 Admin:</span> Ves todas las transacciones de todos los
+                    usuarios.
+                    {% else %}
+                    Mostrando solo tus propias transacciones.
+                    {% endif %}
+                </p>
+                <div id="historyTableContainer" style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-subtle); text-align: left;">
+                                <th style="padding: 12px 8px; color: var(--text-muted);">Fecha</th>
+                                <th style="padding: 12px 8px; color: var(--text-muted);">Usuario</th>
+                                <th style="padding: 12px 8px; color: var(--text-muted);">Acción</th>
+                                <th style="padding: 12px 8px; color: var(--text-muted);">Entrada</th>
+                                <th style="padding: 12px 8px; color: var(--text-muted);">Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <tr>
+                                <td colspan="5" class="alert alert-info" style="text-align: center;">Cargando
+                                    historial...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1416,6 +1459,44 @@
                 });
             } catch (e) {
                 container.innerHTML = '<div class="alert alert-error">Error al cargar</div>';
+            }
+        }
+
+        // History
+        async function loadAllHistory() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">Cargando...</td></tr>';
+
+            try {
+                const res = await fetch('/api/all-history');
+                const data = await res.json();
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">No hay transacciones aún.</td></tr>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const actionBadge = item.action === 'image_gen'
+                        ? '<span style="background: rgba(0,212,255,0.15); color: var(--accent-cyan); padding: 4px 8px; border-radius: 6px; font-size: 11px;">🎨 Imagen</span>'
+                        : '<span style="background: rgba(139,92,246,0.15); color: var(--accent-violet); padding: 4px 8px; border-radius: 6px; font-size: 11px;">📝 Texto</span>';
+
+                    const resultCell = item.image_url
+                        ? `<img src="${item.image_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; cursor: pointer;" onclick="window.open('${item.image_url}', '_blank')">`
+                        : `<span style="color: var(--text-secondary);">${item.result}</span>`;
+
+                    tbody.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--border-subtle);">
+                            <td style="padding: 12px 8px; color: var(--text-muted); white-space: nowrap;">${item.date}</td>
+                            <td style="padding: 12px 8px; color: var(--text-primary);">${item.user}</td>
+                            <td style="padding: 12px 8px;">${actionBadge}</td>
+                            <td style="padding: 12px 8px; color: var(--text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${item.input}</td>
+                            <td style="padding: 12px 8px; max-width: 200px;">${resultCell}</td>
+                        </tr>`;
+                });
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #f87171;">Error al cargar historial</td></tr>';
             }
         }
 

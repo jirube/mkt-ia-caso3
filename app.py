@@ -208,5 +208,27 @@ def text_history():
     } for e in edits]
     return jsonify(data)
 
+@app.route('/api/all-history')
+@login_required
+def all_history():
+    """Historial completo: Admin ve todo, otros solo lo suyo"""
+    query = ContentHistory.query
+    if current_user.role != 'admin':
+        query = query.filter_by(user_id=current_user.id)
+    logs = query.order_by(ContentHistory.timestamp.desc()).limit(100).all()
+    data = []
+    for l in logs:
+        item = {
+            "id": l.id,
+            "user": User.query.get(l.user_id).username,
+            "action": l.action_type,
+            "input": l.prompt_or_input[:100] + "..." if len(l.prompt_or_input) > 100 else l.prompt_or_input,
+            "result": l.result_path_or_text[:100] + "..." if len(l.result_path_or_text) > 100 else l.result_path_or_text,
+            "date": l.timestamp.strftime("%Y-%m-%d %H:%M")
+        }
+        if l.action_type == 'image_gen':
+            item['image_url'] = f"/static/images/{l.result_path_or_text}"
+        data.append(item)
+    return jsonify(data)
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
