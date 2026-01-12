@@ -63,27 +63,27 @@ class Comment(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- REINICIO DE DB (AQUÍ ESTÁ EL TRUCO) ---
+# --- INICIALIZACIÓN DE DB ---
 with app.app_context():
-    # Esta línea BORRA la base de datos vieja para evitar errores de columnas faltantes
-    db.drop_all()  
-    
-    # Esta línea CREA la nueva con soporte para contraseñas
+    # Solo crea las tablas si no existen (no borra datos)
     db.create_all()
     
-    # Creamos los usuarios de nuevo con sus claves
-    users_data = [
-        ("Jimmy_Admin", "admin123", "admin"), 
-        ("Ana_Disenador", "diseno123", "disenador"), 
-        ("Luis_Redactor", "redactor123", "redactor")
-    ]
-    for name, pwd, role in users_data:
-        new_user = User(username=name, role=role)
-        new_user.set_password(pwd) # Aquí se cifra la clave
-        db.session.add(new_user)
-    
-    db.session.commit()
-    print("✅ Base de datos reseteada: Usuarios y contraseñas creados.")
+    # Solo crear usuarios si no existen
+    if User.query.count() == 0:
+        users_data = [
+            ("Jimmy_Admin", "admin123", "admin"), 
+            ("Ana_Disenador", "diseno123", "disenador"), 
+            ("Luis_Redactor", "redactor123", "redactor")
+        ]
+        for name, pwd, role in users_data:
+            new_user = User(username=name, role=role)
+            new_user.set_password(pwd)
+            db.session.add(new_user)
+        
+        db.session.commit()
+        print("✅ Base de datos inicializada: Usuarios creados.")
+    else:
+        print("✅ Base de datos existente cargada.")
 
 # --- RUTAS ---
 @app.route('/login', methods=['GET', 'POST'])
