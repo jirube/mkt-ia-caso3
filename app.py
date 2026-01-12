@@ -9,7 +9,17 @@ from bedrock_client import generate_image, edit_text_content
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'clave-secreta-jimmy-segura'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///marketing.db'
+
+# Base de datos: ruta persistente para Render
+if os.environ.get('RENDER'):
+    # En Render: usar ruta absoluta persistente
+    db_path = '/opt/render/project/src/marketing.db'
+else:
+    # Local: usar carpeta instance
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'marketing.db')
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['UPLOAD_FOLDER'] = 'static/images'
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
