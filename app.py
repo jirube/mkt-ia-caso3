@@ -191,5 +191,22 @@ def my_images():
     data = [{"filename": i.result_path_or_text, "prompt": i.prompt_or_input, "date": i.timestamp.strftime("%Y-%m-%d %H:%M"), "url": f"/static/images/{i.result_path_or_text}"} for i in imgs]
     return jsonify(data)
 
+@app.route('/api/text-history')
+@login_required
+def text_history():
+    """Obtiene historial de ediciones de texto para comparar y revertir"""
+    query = ContentHistory.query.filter_by(action_type='text_edit')
+    if current_user.role != 'admin':
+        query = query.filter_by(user_id=current_user.id)
+    edits = query.order_by(ContentHistory.timestamp.desc()).limit(30).all()
+    data = [{
+        "id": e.id,
+        "user": User.query.get(e.user_id).username,
+        "original": e.prompt_or_input,
+        "result": e.result_path_or_text,
+        "date": e.timestamp.strftime("%Y-%m-%d %H:%M")
+    } for e in edits]
+    return jsonify(data)
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -852,6 +852,9 @@
                         <div class="card-title-icon">🖊️</div>
                         Editor Inteligente
                     </h2>
+                    <button class="btn btn-secondary" onclick="openHistoryModal()">
+                        🕒 Ver Historial
+                    </button>
                 </div>
                 <textarea id="txtInput" class="form-textarea" placeholder="Pega o escribe tu texto aquí..."></textarea>
                 <div class="form-row form-row-2" style="margin-top: 16px;">
@@ -961,6 +964,104 @@
             </div>
         </div>
     </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🕒 Historial de Ediciones</h3>
+                <button class="modal-close" onclick="closeModal('historyModal')">✕</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh;">
+                <div id="historyList" style="display: flex; flex-direction: column; gap: 16px;">
+                    <p class="comment-empty">Cargando historial...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .history-item {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .history-item:hover {
+            border-color: var(--border-active);
+        }
+
+        .history-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .history-meta strong {
+            color: var(--text-primary);
+        }
+
+        .history-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .history-box {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .history-box-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .history-box.original {
+            border-left: 3px solid var(--accent-amber);
+        }
+
+        .history-box.result {
+            border-left: 3px solid var(--accent-emerald);
+        }
+
+        .btn-revert {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, var(--accent-amber) 0%, #d97706 100%);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-revert:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            .history-compare {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 
     <script>
         // Tab Navigation
@@ -1165,6 +1266,74 @@
             document.getElementById('newComment').value = '';
             fetchComments(id);
             loadCollab();
+        }
+
+        // History Functions
+        function openHistoryModal() {
+            document.getElementById('historyModal').classList.add('active');
+            loadHistory();
+        }
+
+        async function loadHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<p class="comment-empty">Cargando historial...</p>';
+
+            try {
+                const res = await fetch('/api/text-history');
+                const data = await res.json();
+                list.innerHTML = '';
+
+                if (data.length === 0) {
+                    list.innerHTML = '<p class="comment-empty">No hay ediciones de texto aún.</p>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const originalPreview = item.original.length > 150 ? item.original.substring(0, 150) + '...' : item.original;
+                    const resultPreview = item.result.length > 150 ? item.result.substring(0, 150) + '...' : item.result;
+
+                    list.innerHTML += `
+                        <div class="history-item">
+                            <div class="history-meta">
+                                <span><strong>${item.user}</strong> • ${item.date}</span>
+                            </div>
+                            <div class="history-compare">
+                                <div>
+                                    <div class="history-box-label">📄 Original</div>
+                                    <div class="history-box original">${originalPreview}</div>
+                                </div>
+                                <div>
+                                    <div class="history-box-label">✨ Resultado</div>
+                                    <div class="history-box result">${resultPreview}</div>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <button class="btn-revert" onclick="revertToVersion('${encodeURIComponent(item.original)}', 'original')">
+                                    ↩️ Usar Original
+                                </button>
+                                <button class="btn-revert" style="background: linear-gradient(135deg, var(--accent-emerald) 0%, #059669 100%);" onclick="revertToVersion('${encodeURIComponent(item.result)}', 'result')">
+                                    ✅ Usar Resultado
+                                </button>
+                            </div>
+                        </div>`;
+                });
+            } catch (e) {
+                list.innerHTML = '<p class="comment-empty" style="color: #f87171;">Error al cargar historial</p>';
+            }
+        }
+
+        function revertToVersion(encodedText, type) {
+            const text = decodeURIComponent(encodedText);
+            document.getElementById('txtInput').value = text;
+            closeModal('historyModal');
+
+            // Switch to text tab
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector('[data-tab="text"]').classList.add('active');
+            document.getElementById('tab-text').classList.add('active');
+
+            alert(`✅ Texto ${type === 'original' ? 'original' : 'editado'} restaurado en el editor`);
         }
     </script>
 </body>
