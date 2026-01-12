@@ -867,14 +867,34 @@
                     </select>
                     <input type="text" id="txtCustom" class="form-input" placeholder="Instrucción adicional...">
                 </div>
-                <button class="btn btn-success btn-full" onclick="editText()">
-                    🖊️ Procesar Texto
-                </button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                    <button class="btn btn-success" onclick="editText()">
+                        🖊️ Procesar Texto
+                    </button>
+                    <button class="btn btn-secondary" onclick="regenerateText()" id="btnRegenerate"
+                        style="display: none;">
+                        🔄 Regenerar (Nueva Versión)
+                    </button>
+                </div>
                 <div class="loading" id="txtLoading">
                     <div class="spinner"></div>
                 </div>
-                <div class="result-area">
-                    <p id="txtResult" class="result-placeholder">El resultado aparecerá aquí...</p>
+
+                <!-- Versions Area -->
+                <div id="versionsArea" style="margin-top: 24px; display: none;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4 style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
+                            📊 Versiones Generadas
+                        </h4>
+                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;"
+                            onclick="clearVersions()">
+                            🗑️ Limpiar
+                        </button>
+                    </div>
+                    <div id="versionsList" class="grid"
+                        style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                    </div>
                 </div>
             </div>
         </div>
@@ -1061,6 +1081,99 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Version Cards */
+        .version-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .version-card:hover {
+            border-color: var(--border-active);
+        }
+
+        .version-card.v1 {
+            border-top: 3px solid var(--accent-cyan);
+        }
+
+        .version-card.v2 {
+            border-top: 3px solid var(--accent-violet);
+        }
+
+        .version-card.v3 {
+            border-top: 3px solid var(--accent-emerald);
+        }
+
+        .version-number {
+            position: absolute;
+            top: -12px;
+            left: 16px;
+            background: var(--bg-tertiary);
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .version-action {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .version-text {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .version-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .version-actions button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-use-version {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        .btn-use-version:hover {
+            box-shadow: var(--glow-cyan);
+        }
+
+        .btn-copy-version {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle) !important;
+        }
+
+        .btn-copy-version:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
     </style>
 
     <script>
@@ -1121,12 +1234,20 @@
             document.getElementById('imgLoading').classList.remove('active');
         }
 
-        // Text Editing
+        // Text Editing with Versions
+        let textVersions = [];
+        let originalText = '';
+
         async function editText() {
             const text = document.getElementById('txtInput').value;
             const action_type = document.getElementById('txtAction').value;
             const instruction = document.getElementById('txtCustom').value;
             if (!text) return alert('Por favor, ingresa texto');
+
+            // Save original text for regeneration
+            if (textVersions.length === 0) {
+                originalText = text;
+            }
 
             document.getElementById('txtLoading').classList.add('active');
 
@@ -1140,14 +1261,92 @@
                 if (data.error) {
                     alert('⛔ ' + data.error);
                 } else {
-                    const result = document.getElementById('txtResult');
-                    result.innerText = data.result;
-                    result.classList.remove('result-placeholder');
+                    // Add to versions
+                    textVersions.push({
+                        action: action_type,
+                        instruction: instruction,
+                        result: data.result,
+                        timestamp: new Date().toLocaleTimeString()
+                    });
+                    renderVersions();
+
+                    // Show regenerate button
+                    document.getElementById('btnRegenerate').style.display = 'block';
                 }
             } catch (e) {
                 alert('Error de conexión');
             }
             document.getElementById('txtLoading').classList.remove('active');
+        }
+
+        function regenerateText() {
+            // Restore original text and process with new action
+            document.getElementById('txtInput').value = originalText;
+            editText();
+        }
+
+        function renderVersions() {
+            const area = document.getElementById('versionsArea');
+            const list = document.getElementById('versionsList');
+
+            if (textVersions.length === 0) {
+                area.style.display = 'none';
+                return;
+            }
+
+            area.style.display = 'block';
+            list.innerHTML = '';
+
+            textVersions.forEach((v, i) => {
+                const vClass = `v${(i % 3) + 1}`;
+                const preview = v.result.length > 200 ? v.result.substring(0, 200) + '...' : v.result;
+
+                list.innerHTML += `
+                    <div class="version-card ${vClass}">
+                        <span class="version-number">V${i + 1}</span>
+                        <div class="version-action">${v.action} ${v.instruction ? '• ' + v.instruction : ''}</div>
+                        <div class="version-text">${preview}</div>
+                        <div class="version-actions">
+                            <button class="btn-use-version" onclick="useVersion(${i})">
+                                ✅ Usar como base
+                            </button>
+                            <button class="btn-copy-version" onclick="copyVersion(${i})">
+                                📋 Copiar
+                            </button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function useVersion(index) {
+            const version = textVersions[index];
+            document.getElementById('txtInput').value = version.result;
+            originalText = version.result;
+            alert(`✅ Versión ${index + 1} cargada como nuevo texto base`);
+        }
+
+        function copyVersion(index) {
+            const version = textVersions[index];
+            navigator.clipboard.writeText(version.result).then(() => {
+                alert('📋 Texto copiado al portapapeles');
+            }).catch(() => {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = version.result;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                alert('📋 Texto copiado');
+            });
+        }
+
+        function clearVersions() {
+            textVersions = [];
+            originalText = '';
+            document.getElementById('versionsArea').style.display = 'none';
+            document.getElementById('versionsList').innerHTML = '';
+            document.getElementById('btnRegenerate').style.display = 'none';
         }
 
         // Collaboration
