@@ -7,3 +7,4 @@ marketing.db
 static/images/*
 !static/images/.gitkeep
 .DS_Store
+*.pdf

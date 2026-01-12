@@ -39,7 +39,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(50))
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -73,9 +73,9 @@ with app.app_context():
     
     # Creamos los usuarios de nuevo con sus claves
     users_data = [
-        ("JimmyAdmin", "admin123", "admin"), 
-        ("AnaDiseno", "diseno123", "disenador"), 
-        ("LuisRedactor", "redactor123", "redactor")
+        ("Jimmy_Admin", "admin123", "admin"), 
+        ("Ana_Disenador", "diseno123", "disenador"), 
+        ("Luis_Redactor", "redactor123", "redactor")
     ]
     for name, pwd, role in users_data:
         new_user = User(username=name, role=role)
